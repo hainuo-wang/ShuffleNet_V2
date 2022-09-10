@@ -2,20 +2,38 @@ import os
 import math
 import argparse
 import shutil
+import time
 import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchvision import transforms
 import torch.optim.lr_scheduler as lr_scheduler
-from ShuffleNetV2_model import shufflenet_v2_x1_0
+from RAF_shuffle_model import shufflenet_v2_x1_0
 from my_dataset import MyDataSet
-from utils import read_split_data, train_one_epoch, evaluate, plot_accuracy
+from utils import train_one_epoch, evaluate, plot_accuracy, read_mydata, read_split_data
+
+
+def parse():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--num_classes', type=int, default=7)
+    parser.add_argument('--epochs', type=int, default=100)
+    parser.add_argument('--batch-size', type=int, default=64)
+    parser.add_argument('--lr', type=float, default=0.01)
+    parser.add_argument('--lrf', type=float, default=0.1)
+    parser.add_argument('--data-path', type=str, default="RAF")
+    # shufflenetv2_x1.0 官方权重下载地址
+    # https://download.pytorch.org/models/shufflenetv2_x1-5666bf0f80.pth
+    parser.add_argument('--weights', type=str, default='shufflenetv2_x1-5666bf0f80.pth',
+                        help='initial weights path')
+    parser.add_argument('--freeze-layers', type=bool, default=False)
+    parser.add_argument('--device', default='cuda:0', help='device id (i.e. 0 or 0,1 or cpu)')
+    args = parser.parse_args()
+    return args
 
 
 def main(args):
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
-
     print(args)
     print('Start Tensorboard with "tensorboard --logdir=runs", view at http://localhost:6006/')
     logs_path = "runs"
@@ -24,12 +42,10 @@ def main(args):
     tb_writer = SummaryWriter(logs_path)
     if os.path.exists("./weights") is False:
         os.makedirs("./weights")
-
     train_images_path, train_images_label, val_images_path, val_images_label = read_split_data(args.data_path)
-
     data_transform = {
-        "train": transforms.Compose([transforms.RandomResizedCrop(224),
-                                     transforms.RandomHorizontalFlip(),
+        "train": transforms.Compose([transforms.Resize(256),
+                                     transforms.CenterCrop(224),
                                      transforms.ToTensor(),
                                      transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])]),
         "val": transforms.Compose([transforms.Resize(256),
@@ -48,7 +64,7 @@ def main(args):
                             transform=data_transform["val"])
 
     batch_size = args.batch_size
-    nw = min([os.cpu_count(), batch_size if batch_size > 1 else 0, 8])  # number of workers
+    nw = min([os.cpu_count(), batch_size if batch_size > 1 else 0, 0])  # number of workers
     print('Using {} dataloader workers every process'.format(nw))
     train_loader = DataLoader(train_dataset,
                               batch_size=batch_size,
@@ -109,35 +125,19 @@ def main(args):
         accuracy_val = round(acc_val, 3)
         total_accuracy_val.append(accuracy_val)
         print("[epoch {}] train_accuracy: {} test_accuracy:{}".format(epoch, accuracy_train, accuracy_val))
-        tags = ["loss", "accuracy", "learning_rate"]
+        tags = ["loss", "accuracy_train", "accuracy_val", "learning_rate"]
         tb_writer.add_scalar(tags[0], mean_loss, epoch)
-        tb_writer.add_scalar(tags[1], acc_val, epoch)
-        tb_writer.add_scalar(tags[2], optimizer.param_groups[0]["lr"], epoch)
+        tb_writer.add_scalar(tags[1], accuracy_train, epoch)
+        tb_writer.add_scalar(tags[2], accuracy_val, epoch)
+        tb_writer.add_scalar(tags[3], optimizer.param_groups[0]["lr"], epoch)
 
         torch.save(model.state_dict(), "./weights/model-{}.pth".format(epoch))
-    plot_accuracy(args.epochs, total_accuracy_train, total_accuracy_val, "ShuffleNet_V2")
+    plot_accuracy(args.epochs, total_accuracy_train, total_accuracy_val, "ShuffleNet_V2_RAF")
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--num_classes', type=int, default=7)
-    parser.add_argument('--epochs', type=int, default=1000)
-    parser.add_argument('--batch-size', type=int, default=64)
-    parser.add_argument('--lr', type=float, default=0.05)
-    parser.add_argument('--lrf', type=float, default=0.1)
-
-    # 数据集所在根目录
-    # https://storage.googleapis.com/download.tensorflow.org/example_images/flower_photos.tgz
-    parser.add_argument('--data-path', type=str,
-                        default="RAF-DB")
-
-    # shufflenetv2_x1.0 官方权重下载地址
-    # https://download.pytorch.org/models/shufflenetv2_x1-5666bf0f80.pth
-    parser.add_argument('--weights', type=str, default='shufflenetv2_x1-5666bf0f80.pth',
-                        help='initial weights path')
-    parser.add_argument('--freeze-layers', type=bool, default=False)
-    parser.add_argument('--device', default='cuda:0', help='device id (i.e. 0 or 0,1 or cpu)')
-
-    opt = parser.parse_args()
-
-    main(opt)
+    start = time.perf_counter()
+    args = parse()
+    main(args)
+    end = time.perf_counter()
+    print('Running time: {} Minutes, {} Seconds'.format((end - start) // 60, (end - start) % 60))

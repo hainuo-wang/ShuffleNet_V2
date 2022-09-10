@@ -108,7 +108,7 @@ class Net(nn.Module):
         self.incep2 = InceptionA(in_channels=20)
 
         self.mp = nn.MaxPool2d(2)
-        self.fc = nn.Linear(247192, 7)
+        self.fc = nn.Conv2d(247192, 7)
 
     def forward(self, x):
         in_size = x.size(0)

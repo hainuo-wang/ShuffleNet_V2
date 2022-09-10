@@ -1,4 +1,5 @@
 from typing import List, Callable
+
 import torch
 from torch import Tensor
 import torch.nn as nn
@@ -95,7 +96,7 @@ class ShuffleNetV2(nn.Module):
         self._stage_out_channels = stages_out_channels
 
         # input RGB image
-        input_channels = 1
+        input_channels = 3
         output_channels = self._stage_out_channels[0]
 
         self.conv1 = nn.Sequential(
@@ -128,8 +129,10 @@ class ShuffleNetV2(nn.Module):
             nn.ReLU(inplace=True)
         )
 
-        self.fc = nn.Conv2d(output_channels, num_classes, 7)
-        self.flt = nn.Flatten()
+        self.fc = nn.Linear(output_channels, num_classes)
+        # self.fc = nn.Conv2d(output_channels, num_classes, 7)
+        # self.drop = nn.Dropout(p=0.5)
+        # self.flt = nn.Flatten()
 
     def _forward_impl(self, x: Tensor) -> Tensor:
         # See note [TorchScript super()]
@@ -140,9 +143,9 @@ class ShuffleNetV2(nn.Module):
         x = self.stage4(x)
         x = self.conv5(x)
         # print(x.shape)
-        # x = x.mean([2, 3])  # global pool
+        x = x.mean([2, 3])  # global pool
         x = self.fc(x)
-        x = self.flt(x)
+        # x = self.flt(x)
         return x
 
     def forward(self, x: Tensor) -> Tensor:

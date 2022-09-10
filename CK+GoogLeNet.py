@@ -1,6 +1,5 @@
 import sys
 import torch
-from matplotlib import pyplot as plt
 from torch import nn, optim
 from utils import read_to_csv, plot_accuracy
 import torch.nn.functional as F
@@ -8,7 +7,6 @@ from tqdm import tqdm
 
 
 train_dataloader, test_dataloader = read_to_csv("CK+", "CK+.csv")
-
 
 class InceptionA(nn.Module):
     def __init__(self, in_channels):

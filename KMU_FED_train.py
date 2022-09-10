@@ -2,15 +2,35 @@ import os
 import math
 import argparse
 import shutil
+import time
 import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchvision import transforms
 import torch.optim.lr_scheduler as lr_scheduler
-from ShuffleNetV2_model import shufflenet_v2_x1_0
+from KF_shuffle_model import shufflenet_v2_x1_0
 from my_dataset import MyDataSet
 from utils import read_split_data, train_one_epoch, evaluate, plot_accuracy
+
+
+def parse():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--num_classes', type=int, default=6)
+    parser.add_argument('--epochs', type=int, default=10)
+    parser.add_argument('--batch-size', type=int, default=16)
+    parser.add_argument('--lr', type=float, default=0.01)
+    parser.add_argument('--lrf', type=float, default=0.1)
+    parser.add_argument('--data-path', type=str, default="KMU-FED")
+    # shufflenetv2_x1.0 官方权重下载地址
+    # https://download.pytorch.org/models/shufflenetv2_x1-5666bf0f80.pth
+    # shufflenetv2_x1-5666bf0f80.pth
+    parser.add_argument('--weights', type=str, default='shufflenetv2_x1-5666bf0f80.pth',
+                        help='initial weights path')
+    parser.add_argument('--freeze-layers', type=bool, default=False)
+    parser.add_argument('--device', default='cuda:0', help='device id (i.e. 0 or 0,1 or cpu)')
+    args = parser.parse_args()
+    return args
 
 
 def main(args):
@@ -28,8 +48,8 @@ def main(args):
     train_images_path, train_images_label, val_images_path, val_images_label = read_split_data(args.data_path)
 
     data_transform = {
-        "train": transforms.Compose([transforms.RandomResizedCrop(224),
-                                     transforms.RandomHorizontalFlip(),
+        "train": transforms.Compose([transforms.Resize(256),
+                                     transforms.CenterCrop(224),
                                      transforms.ToTensor(),
                                      transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])]),
         "val": transforms.Compose([transforms.Resize(256),
@@ -48,7 +68,7 @@ def main(args):
                             transform=data_transform["val"])
 
     batch_size = args.batch_size
-    nw = min([os.cpu_count(), batch_size if batch_size > 1 else 0, 8])  # number of workers
+    nw = min([os.cpu_count(), batch_size if batch_size > 1 else 0, 0])  # number of workers
     print('Using {} dataloader workers every process'.format(nw))
     train_loader = DataLoader(train_dataset,
                               batch_size=batch_size,
@@ -63,7 +83,9 @@ def main(args):
                             pin_memory=True,
                             num_workers=nw,
                             collate_fn=val_dataset.collate_fn)
-
+    # for x, y in train_loader:
+    #     print(x.shape)
+    # exit()
     # 如果存在预训练权重则载入
     model = shufflenet_v2_x1_0(num_classes=args.num_classes).to(device)
     if args.weights != "":
@@ -119,25 +141,8 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--num_classes', type=int, default=6)
-    parser.add_argument('--epochs', type=int, default=50)
-    parser.add_argument('--batch-size', type=int, default=16)
-    parser.add_argument('--lr', type=float, default=0.01)
-    parser.add_argument('--lrf', type=float, default=0.1)
-
-    # 数据集所在根目录
-    # https://storage.googleapis.com/download.tensorflow.org/example_images/flower_photos.tgz
-    parser.add_argument('--data-path', type=str,
-                        default="KMU-FED")
-
-    # shufflenetv2_x1.0 官方权重下载地址
-    # https://download.pytorch.org/models/shufflenetv2_x1-5666bf0f80.pth
-    parser.add_argument('--weights', type=str, default='shufflenetv2_x1-5666bf0f80.pth',
-                        help='initial weights path')
-    parser.add_argument('--freeze-layers', type=bool, default=False)
-    parser.add_argument('--device', default='cuda:0', help='device id (i.e. 0 or 0,1 or cpu)')
-
-    opt = parser.parse_args()
-
-    main(opt)
+    start = time.perf_counter()
+    args = parse()
+    main(args)
+    end = time.perf_counter()
+    print('Running time: {} Minutes, {} Seconds'.format((end - start) // 60, (end - start) % 60))

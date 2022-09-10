@@ -95,7 +95,7 @@ class ShuffleNetV2(nn.Module):
         self._stage_out_channels = stages_out_channels
 
         # input RGB image
-        input_channels = 1
+        input_channels = 3
         output_channels = self._stage_out_channels[0]
 
         self.conv1 = nn.Sequential(
@@ -139,7 +139,6 @@ class ShuffleNetV2(nn.Module):
         x = self.stage3(x)
         x = self.stage4(x)
         x = self.conv5(x)
-        # print(x.shape)
         # x = x.mean([2, 3])  # global pool
         x = self.fc(x)
         x = self.flt(x)

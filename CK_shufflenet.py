@@ -2,21 +2,44 @@ import os
 import math
 import argparse
 import shutil
+import time
 import torch
 import torch.optim as optim
+from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import torch.optim.lr_scheduler as lr_scheduler
+from torchvision.transforms import transforms
 
-from utils import train_one_epoch, evaluate, plot_accuracy, read_to_csv
-# from ShuffleNetV2_model import shufflenet_v2_x1_0
+from my_dataset import MyDataSet
+from utils import train_one_epoch, evaluate, plot_accuracy, read_to_csv, data_set_split, read_split_data, read_mydata
 from CKPLUS_ShuffleNet_V2_model import shufflenet_v2_x1_0
 
-train_loader, val_loader = read_to_csv("CK+", "CK+.csv")
+
+def parse():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--num_classes', type=int, default=7)
+    parser.add_argument('--epochs', type=int, default=10)
+    parser.add_argument('--batch-size', type=int, default=16)
+    parser.add_argument('--lr', type=float, default=0.01)
+    parser.add_argument('--lrf', type=float, default=0.1)
+    parser.add_argument('--data_path', type=str, default="CK+")
+    # parser.add_argument('--csv_path', type=str, default="CK+.csv")
+    parser.add_argument('--src_data_folder', type=str, default="CK+")
+    parser.add_argument('--target_data_folder',type=str, default="CK+_classification")
+    # shufflenetv2_x1.0 官方权重下载地址
+    # https://download.pytorch.org/models/shufflenetv2_x1-5666bf0f80.pth
+    parser.add_argument('--weights', type=str, default='shufflenetv2_x1-5666bf0f80.pth',
+                        help='initial weights path')
+    parser.add_argument('--freeze-layers', type=bool, default=False)
+    parser.add_argument('--device', default='cuda:0', help='device id (i.e. 0 or 0,1 or cpu)')
+    args = parser.parse_args()
+    return args
 
 
 def main(args):
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
-
+    # train_loader, val_loader = read_to_csv(args.data_path, "CK+.csv")
+    data_set_split(args.src_data_folder, args.target_data_folder)
     print(args)
     print('Start Tensorboard with "tensorboard --logdir=runs", view at http://localhost:6006/')
     logs_path = "runs"
@@ -25,6 +48,46 @@ def main(args):
     tb_writer = SummaryWriter(logs_path)
     if os.path.exists("./weights") is False:
         os.makedirs("./weights")
+    train_images_path, train_images_label = read_mydata("CK+_classification/train", "train")
+    val_images_path, val_images_label = read_mydata("CK+_classification/val", "val")
+    data_transform = {
+        "train": transforms.Compose(
+            [transforms.Resize(256),
+             transforms.CenterCrop(224),
+             transforms.ToTensor()]),
+        "val": transforms.Compose(
+            [transforms.Resize(256),
+             transforms.CenterCrop(224),
+             transforms.ToTensor()])}
+
+    # 实例化训练数据集
+    train_dataset = MyDataSet(images_path=train_images_path,
+                              images_class=train_images_label,
+                              transform=data_transform["train"])
+
+    # 实例化验证数据集
+    val_dataset = MyDataSet(images_path=val_images_path,
+                            images_class=val_images_label,
+                            transform=data_transform["val"])
+
+    batch_size = args.batch_size
+    nw = min([os.cpu_count(), batch_size if batch_size > 1 else 0, 0])  # number of workers
+    print('Using {} dataloader workers every process'.format(nw))
+    train_loader = DataLoader(train_dataset,
+                              batch_size=batch_size,
+                              shuffle=True,
+                              pin_memory=True,
+                              num_workers=nw,
+                              collate_fn=train_dataset.collate_fn)
+
+    val_loader = DataLoader(val_dataset,
+                            batch_size=batch_size,
+                            shuffle=False,
+                            pin_memory=True,
+                            num_workers=nw,
+                            collate_fn=val_dataset.collate_fn)
+
+
     # 如果存在预训练权重则载入
     model = shufflenet_v2_x1_0(num_classes=args.num_classes).to(device)
     if args.weights != "":
@@ -80,24 +143,8 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--num_classes', type=int, default=7)
-    parser.add_argument('--epochs', type=int, default=50)
-    parser.add_argument('--batch-size', type=int, default=16)
-    parser.add_argument('--lr', type=float, default=0.01)
-    parser.add_argument('--lrf', type=float, default=0.1)
-
-    # 数据集所在根目录
-    # https://storage.googleapis.com/download.tensorflow.org/example_images/flower_photos.tgz
-    parser.add_argument('--data-path', type=str,
-                        default="CK+")
-
-    # shufflenetv2_x1.0 官方权重下载地址
-    # https://download.pytorch.org/models/shufflenetv2_x1-5666bf0f80.pth
-    parser.add_argument('--weights', type=str, default='shufflenetv2_x1-5666bf0f80.pth',
-                        help='initial weights path')
-    parser.add_argument('--freeze-layers', type=bool, default=False)
-    parser.add_argument('--device', default='cuda:0', help='device id (i.e. 0 or 0,1 or cpu)')
-
-    opt = parser.parse_args()
-    main(opt)
+    start = time.perf_counter()
+    args = parse()
+    main(args)
+    end = time.perf_counter()
+    print('Running time: {} Minutes, {} Seconds'.format((end - start) // 60, (end - start) % 60))
