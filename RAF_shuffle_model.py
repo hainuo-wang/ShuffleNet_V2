@@ -129,10 +129,15 @@ class ShuffleNetV2(nn.Module):
             nn.ReLU(inplace=True)
         )
 
-        self.fc = nn.Linear(output_channels, num_classes)
+        # self.fc = nn.Linear(output_channels, num_classes)
         # self.fc = nn.Conv2d(output_channels, num_classes, 7)
+        self.fc = nn.Sequential(
+            nn.Conv2d(output_channels, num_classes, 7),
+            nn.BatchNorm2d(num_classes),
+            nn.ReLU(inplace=True)
+        )
         # self.drop = nn.Dropout(p=0.5)
-        # self.flt = nn.Flatten()
+        self.flt = nn.Flatten()
 
     def _forward_impl(self, x: Tensor) -> Tensor:
         # See note [TorchScript super()]
@@ -143,9 +148,10 @@ class ShuffleNetV2(nn.Module):
         x = self.stage4(x)
         x = self.conv5(x)
         # print(x.shape)
-        x = x.mean([2, 3])  # global pool
+        # x = x.mean([2, 3])  # global pool
         x = self.fc(x)
-        # x = self.flt(x)
+        x = self.flt(x)
+
         return x
 
     def forward(self, x: Tensor) -> Tensor:

@@ -4,7 +4,7 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from CKPLUS_ShuffleNet_V2_model import shufflenet_v2_x1_0
-from my_dataset import MyDataSet
+from my_dataset import MyDataSetL
 from utils import read_split_data, train_one_epoch, evaluate, plot_accuracy, read_mydata, data_set_split
 
 
@@ -37,9 +37,9 @@ def main(args):
         [transforms.Resize(256),
          transforms.CenterCrop(224),
          transforms.ToTensor()])
-    test_dataset = MyDataSet(images_path=test_images_path,
-                             images_class=test_images_label,
-                             transform=data_transform)
+    test_dataset = MyDataSetL(images_path=test_images_path,
+                              images_class=test_images_label,
+                              transform=data_transform)
     batch_size = args.batch_size
     test_loader = DataLoader(test_dataset,
                              batch_size=batch_size,
@@ -49,8 +49,8 @@ def main(args):
 
     total_accuracy_val = []
     acc_val = evaluate(model=model,
-                     data_loader=test_loader,
-                     device=device)
+                       data_loader=test_loader,
+                       device=device)
     accuracy_val = round(acc_val, 3)
     total_accuracy_val.append(accuracy_val)
     print("[test_accuracy:{}".format(accuracy_val))
@@ -62,4 +62,3 @@ if __name__ == '__main__':
     main(args)
     end = time.perf_counter()
     print('Running time: {} Minutes, {} Seconds'.format((end - start) // 60, (end - start) % 60))
-

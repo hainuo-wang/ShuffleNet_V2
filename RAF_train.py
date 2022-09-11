@@ -10,21 +10,21 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision import transforms
 import torch.optim.lr_scheduler as lr_scheduler
 from RAF_shuffle_model import shufflenet_v2_x1_0
-from my_dataset import MyDataSet
+from my_dataset import MyDataSetRGB
 from utils import train_one_epoch, evaluate, plot_accuracy, read_mydata, read_split_data
 
 
 def parse():
     parser = argparse.ArgumentParser()
     parser.add_argument('--num_classes', type=int, default=7)
-    parser.add_argument('--epochs', type=int, default=100)
+    parser.add_argument('--epochs', type=int, default=200)
     parser.add_argument('--batch-size', type=int, default=64)
     parser.add_argument('--lr', type=float, default=0.01)
     parser.add_argument('--lrf', type=float, default=0.1)
     parser.add_argument('--data-path', type=str, default="RAF")
     # shufflenetv2_x1.0 官方权重下载地址
     # https://download.pytorch.org/models/shufflenetv2_x1-5666bf0f80.pth
-    parser.add_argument('--weights', type=str, default='shufflenetv2_x1-5666bf0f80.pth',
+    parser.add_argument('--weights', type=str, default='',
                         help='initial weights path')
     parser.add_argument('--freeze-layers', type=bool, default=False)
     parser.add_argument('--device', default='cuda:0', help='device id (i.e. 0 or 0,1 or cpu)')
@@ -47,21 +47,23 @@ def main(args):
         "train": transforms.Compose([transforms.Resize(256),
                                      transforms.CenterCrop(224),
                                      transforms.ToTensor(),
-                                     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])]),
+                                     transforms.Normalize(mean=[0.5755231, 0.4494877, 0.40105116],
+                                                          std=[0.20824121, 0.19082166, 0.18230404])]),
         "val": transforms.Compose([transforms.Resize(256),
                                    transforms.CenterCrop(224),
                                    transforms.ToTensor(),
-                                   transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])}
+                                   transforms.Normalize(mean=[0.5755231, 0.4494877, 0.40105116],
+                                                        std=[0.20824121, 0.19082166, 0.18230404])])}
 
     # 实例化训练数据集
-    train_dataset = MyDataSet(images_path=train_images_path,
-                              images_class=train_images_label,
-                              transform=data_transform["train"])
+    train_dataset = MyDataSetRGB(images_path=train_images_path,
+                                 images_class=train_images_label,
+                                 transform=data_transform["train"])
 
     # 实例化验证数据集
-    val_dataset = MyDataSet(images_path=val_images_path,
-                            images_class=val_images_label,
-                            transform=data_transform["val"])
+    val_dataset = MyDataSetRGB(images_path=val_images_path,
+                               images_class=val_images_label,
+                               transform=data_transform["val"])
 
     batch_size = args.batch_size
     nw = min([os.cpu_count(), batch_size if batch_size > 1 else 0, 0])  # number of workers

@@ -9,7 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision import transforms
 import torch.optim.lr_scheduler as lr_scheduler
 from ShuffleNetV2_model import shufflenet_v2_x1_0
-from my_dataset import MyDataSet
+from my_dataset import MyDataSetRGB
 from utils import read_split_data, train_one_epoch, evaluate, plot_accuracy
 
 
@@ -38,14 +38,14 @@ def main(args):
                                    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])}
 
     # 实例化训练数据集
-    train_dataset = MyDataSet(images_path=train_images_path,
-                              images_class=train_images_label,
-                              transform=data_transform["train"])
+    train_dataset = MyDataSetRGB(images_path=train_images_path,
+                                 images_class=train_images_label,
+                                 transform=data_transform["train"])
 
     # 实例化验证数据集
-    val_dataset = MyDataSet(images_path=val_images_path,
-                            images_class=val_images_label,
-                            transform=data_transform["val"])
+    val_dataset = MyDataSetRGB(images_path=val_images_path,
+                               images_class=val_images_label,
+                               transform=data_transform["val"])
 
     batch_size = args.batch_size
     nw = min([os.cpu_count(), batch_size if batch_size > 1 else 0, 8])  # number of workers

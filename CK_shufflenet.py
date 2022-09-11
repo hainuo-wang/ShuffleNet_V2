@@ -10,7 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 import torch.optim.lr_scheduler as lr_scheduler
 from torchvision.transforms import transforms
 
-from my_dataset import MyDataSet
+from my_dataset import MyDataSetL
 from utils import train_one_epoch, evaluate, plot_accuracy, read_to_csv, data_set_split, read_split_data, read_mydata
 from CKPLUS_ShuffleNet_V2_model import shufflenet_v2_x1_0
 
@@ -25,7 +25,7 @@ def parse():
     parser.add_argument('--data_path', type=str, default="CK+")
     # parser.add_argument('--csv_path', type=str, default="CK+.csv")
     parser.add_argument('--src_data_folder', type=str, default="CK+")
-    parser.add_argument('--target_data_folder',type=str, default="CK+_classification")
+    parser.add_argument('--target_data_folder', type=str, default="CK+_classification")
     # shufflenetv2_x1.0 官方权重下载地址
     # https://download.pytorch.org/models/shufflenetv2_x1-5666bf0f80.pth
     parser.add_argument('--weights', type=str, default='shufflenetv2_x1-5666bf0f80.pth',
@@ -61,14 +61,14 @@ def main(args):
              transforms.ToTensor()])}
 
     # 实例化训练数据集
-    train_dataset = MyDataSet(images_path=train_images_path,
-                              images_class=train_images_label,
-                              transform=data_transform["train"])
+    train_dataset = MyDataSetL(images_path=train_images_path,
+                               images_class=train_images_label,
+                               transform=data_transform["train"])
 
     # 实例化验证数据集
-    val_dataset = MyDataSet(images_path=val_images_path,
-                            images_class=val_images_label,
-                            transform=data_transform["val"])
+    val_dataset = MyDataSetL(images_path=val_images_path,
+                             images_class=val_images_label,
+                             transform=data_transform["val"])
 
     batch_size = args.batch_size
     nw = min([os.cpu_count(), batch_size if batch_size > 1 else 0, 0])  # number of workers
@@ -86,7 +86,6 @@ def main(args):
                             pin_memory=True,
                             num_workers=nw,
                             collate_fn=val_dataset.collate_fn)
-
 
     # 如果存在预训练权重则载入
     model = shufflenet_v2_x1_0(num_classes=args.num_classes).to(device)

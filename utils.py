@@ -192,7 +192,7 @@ def evaluate(model, data_loader, device):
     return sum_num.item() / total_num
 
 
-def get_stat(train_data):
+def get_stat3(train_data):
     """
     Compute mean and variance for training data
     :param train_data: 自定义类Dataset(或ImageFolder即可)
@@ -207,6 +207,25 @@ def get_stat(train_data):
         for d in range(3):
             mean[d] += X[:, d, :, :].mean()
             std[d] += X[:, d, :, :].std()
+    mean.div_(len(train_data))
+    std.div_(len(train_data))
+    return list(mean.numpy()), list(std.numpy())
+
+
+def get_stat1(train_data):
+    """
+    Compute mean and variance for training data
+    :param train_data: 自定义类Dataset(或ImageFolder即可)
+    :return: (mean, std)
+    """
+    train_loader = DataLoader(
+        train_data, batch_size=1, shuffle=False, num_workers=0,
+        pin_memory=True)
+    mean = torch.zeros(1)
+    std = torch.zeros(1)
+    for X, _ in train_loader:
+        mean += X[:, 0, :, :].mean()
+        std += X[:, 0, :, :].std()
     mean.div_(len(train_data))
     std.div_(len(train_data))
     return list(mean.numpy()), list(std.numpy())
