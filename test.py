@@ -36,7 +36,8 @@ def main(args):
     data_transform = transforms.Compose(
         [transforms.Resize(256),
          transforms.CenterCrop(224),
-         transforms.ToTensor()])
+         transforms.ToTensor(),
+         transforms.Normalize(0.51194453, 0.25666744)])
     test_dataset = MyDataSetL(images_path=test_images_path,
                               images_class=test_images_label,
                               transform=data_transform)
