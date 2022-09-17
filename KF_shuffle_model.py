@@ -128,7 +128,9 @@ class ShuffleNetV2(nn.Module):
             nn.ReLU(inplace=True)
         )
 
+        # self.fc = nn.Linear(output_channels, num_classes)
         self.fc = nn.Conv2d(output_channels, num_classes, 7)
+        self.aap = nn.AdaptiveAvgPool2d(output_size=(1, 1))
         self.flt = nn.Flatten()
 
     def _forward_impl(self, x: Tensor) -> Tensor:
@@ -141,6 +143,7 @@ class ShuffleNetV2(nn.Module):
         x = self.conv5(x)
         # x = x.mean([2, 3])  # global pool
         x = self.fc(x)
+        x = self.aap(x)
         x = self.flt(x)
         return x
 

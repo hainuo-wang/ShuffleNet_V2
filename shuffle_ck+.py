@@ -17,14 +17,14 @@ from utils import read_split_data, train_one_epoch, evaluate, plot_accuracy
 def parse():
     parser = argparse.ArgumentParser()
     parser.add_argument('--num_classes', type=int, default=7)
-    parser.add_argument('--epochs', type=int, default=10)
+    parser.add_argument('--epochs', type=int, default=50)
     parser.add_argument('--batch-size', type=int, default=16)
     parser.add_argument('--lr', type=float, default=0.01)
     parser.add_argument('--lrf', type=float, default=0.1)
-    parser.add_argument('--data-path', type=str, default="CK+")
+    parser.add_argument('--data-path', type=str, default="../data/CK+")
     # shufflenetv2_x1.0 官方权重下载地址
     # https://download.pytorch.org/models/shufflenetv2_x1-5666bf0f80.pth
-    parser.add_argument('--weights', type=str, default='shufflenetv2_x1-5666bf0f80.pth',
+    parser.add_argument('--weights', type=str, default='',
                         help='initial weights path')
     parser.add_argument('--freeze-layers', type=bool, default=False)
     parser.add_argument('--device', default='cuda:0', help='device id (i.e. 0 or 0,1 or cpu)')
@@ -47,13 +47,13 @@ def main(args):
 
     data_transform = {
         "train": transforms.Compose(
-            [transforms.Resize(288),
-             transforms.CenterCrop(256),
+            [transforms.Resize(256),
+             transforms.CenterCrop(224),
              transforms.ToTensor(),
              transforms.Normalize(0.51194453, 0.25666744)]),
         "val": transforms.Compose(
-            [transforms.Resize(288),
-             transforms.CenterCrop(256),
+            [transforms.Resize(256),
+             transforms.CenterCrop(224),
              transforms.ToTensor(),
              transforms.Normalize(0.51194453, 0.25666744)])}
 

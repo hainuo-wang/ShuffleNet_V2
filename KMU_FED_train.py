@@ -21,7 +21,7 @@ def parse():
     parser.add_argument('--batch-size', type=int, default=16)
     parser.add_argument('--lr', type=float, default=0.01)
     parser.add_argument('--lrf', type=float, default=0.1)
-    parser.add_argument('--data-path', type=str, default="KMU-FED")
+    parser.add_argument('--data-path', type=str, default="../data/KMU-FED")
     # shufflenetv2_x1.0 官方权重下载地址
     # https://download.pytorch.org/models/shufflenetv2_x1-5666bf0f80.pth
     # shufflenetv2_x1-5666bf0f80.pth
